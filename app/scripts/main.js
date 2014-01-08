@@ -54,15 +54,26 @@
   var StarFighter = function(options) {
     DrawableObject.call(this, '/images/fighter.png', options);
     //this.bindKeyHandler('keydown',  this.moveDown);
-    this.bindKeyHandler('keyup'  ,  this.moveUp);
+    this.bindKeyHandler('keydown'  ,  {
+      38: this.moveUp,
+      37: this.moveLeft,
+      39: this.moveRight,
+      40: this.moveDown
+    });
+
+
     //this.bindKeyHandler('keyleft',  this.moveLeft);
     //this.bindKeyHandler('keyright', this.moveRight);
   };
 
   StarFighter.prototype = Object.create(DrawableObject.prototype);
   StarFighter.fn = StarFighter.prototype;
-  StarFighter.fn.bindKeyHandler = function(key, fn) {
-    $(window).on(key, _.bind(fn, this));
+  StarFighter.fn.bindKeyHandler = function(key, keyMap) {
+    //$(window).on(key, _.bind(fn, this));
+    $(window).on('keydown', _.bind(function(e) {
+      e.preventDefault();
+      keyMap[event.keyCode].call(this);
+    }, this));
   };
 
   StarFighter.fn.moveLeft = function() {
@@ -96,6 +107,13 @@
       drawableObject.draw(context);
     });
   };
+  var redrawCanvas = function(context, drawableObjects, canvasWidth, canvasHeight) {
+    requestAnimationFrame(
+      _.bind(redrawCanvas, this, context, drawableObjects, canvasWidth, canvasHeight));
+    clearCanvas(context, canvasWidth, canvasHeight);
+    drawCanvas(context, drawableObjects);
+  };
+
 
   var clearCanvas = function(context, width, height) {
     context.fillStyle = 'white';
@@ -115,10 +133,8 @@
       scale: 0.5
     }));
 
-    requestAnimationFrame(function() {
-      clearCanvas(context, canvasWidth, canvasHeight);
-      drawCanvas(context, drawableObjects);
-    });
+    redrawCanvas(context, drawableObjects, canvasWidth, canvasHeight);
+
   };
 
 

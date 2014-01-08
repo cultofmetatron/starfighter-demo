@@ -9,6 +9,16 @@
     };
   };
 
+  /*
+   * Scene is a structure containing all objects in a scene
+   */
+  var Scene = function(canvas) {
+    this.canvas = canvas
+    this.context = 5
+    this.drawableObjects = [];
+
+  }
+
   var DrawableObject = function(src, options) {
     var imgLoad = $.Deferred();
     this.imgLoaded = imgLoad.promise();
@@ -103,7 +113,6 @@
   
   var drawCanvas = function(context, drawableObjects) {
     _(drawableObjects).each(function(drawableObject) {
-      
       drawableObject.draw(context);
     });
   };
@@ -126,15 +135,19 @@
     var canvasHeight = $canvas.height();
     var context = $canvas[0].getContext("2d");
     var drawableObjects = [];
-
+    
+    drawableObjects.push(new DrawableObject('/images/background.jpeg', {
+      xPos: 0,
+      yPos: 0,
+      scale: 1
+    }));
+    
     drawableObjects.push(new StarFighter({
       xPos: 200,
       yPos: 300,
-      scale: 0.5
+      scale: .5
     }));
-
     redrawCanvas(context, drawableObjects, canvasWidth, canvasHeight);
-
   };
 
 

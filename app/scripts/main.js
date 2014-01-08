@@ -13,13 +13,35 @@
    * Scene is a structure containing all objects in a scene
    */
   var Scene = function(canvas) {
-    this.canvas = canvas
-    this.context = 5
+    this.canvas = canvas;
+    this.context = this.canvas.getContext('2d');
     this.drawableObjects = [];
-
-  }
+    this.width  = $(canvas).width();
+    this.height = $(canvas).height();
+    
+  };
+  Scene.prototype = Object.create({});
+  Scene.fn = Scene.prototype;
+  Scene.fn.push = function(drawableObject) {
+    this.drawableObjects.push(drawableObject);
+    return this;
+  };
+  Scene.fn.render = function() {
+    _(this.drawableObjects).chain().
+      sortBy('order')
+      .each(function(drawableObject) {
+        drawableObject.draw(this.context);
+      }, this)
+      .value();
+      return this;
+  };
+  Scene.fn.clear = function() {
+    this.context.fillStyle = 'white';
+    this.context.fillRect(0, 0, this.width, this.height);
+  };
 
   var DrawableObject = function(src, options) {
+    this.order = options.order || 0;
     var imgLoad = $.Deferred();
     this.imgLoaded = imgLoad.promise();
     options = options || {};
@@ -107,49 +129,31 @@
   };
 
 
-
-
-
-  
-  var drawCanvas = function(context, drawableObjects) {
-    _(drawableObjects).each(function(drawableObject) {
-      drawableObject.draw(context);
-    });
-  };
-  var redrawCanvas = function(context, drawableObjects, canvasWidth, canvasHeight) {
-    requestAnimationFrame(
-      _.bind(redrawCanvas, this, context, drawableObjects, canvasWidth, canvasHeight));
-    clearCanvas(context, canvasWidth, canvasHeight);
-    drawCanvas(context, drawableObjects);
+  var redrawCanvas = function(scene) {
+    requestAnimationFrame(_.bind(redrawCanvas, this, scene));
+    scene.clear();
+    scene.render();
   };
 
-
-  var clearCanvas = function(context, width, height) {
-    context.fillStyle = 'white';
-    context.fillRect(0, 0, width, height);
-  };
 
   var loadCanvas = function() {
     var $canvas = $('canvas#drawable');
-    var canvasWidth  = $canvas.width();
-    var canvasHeight = $canvas.height();
-    var context = $canvas[0].getContext("2d");
-    var drawableObjects = [];
+    var scene = new Scene($canvas[0]);
     
-    drawableObjects.push(new DrawableObject('/images/background.jpeg', {
+    
+    scene.push(new DrawableObject('/images/background.jpeg', {
       xPos: 0,
       yPos: 0,
       scale: 1
     }));
     
-    drawableObjects.push(new StarFighter({
+    scene.push(new StarFighter({
       xPos: 200,
       yPos: 300,
       scale: .5
     }));
-    redrawCanvas(context, drawableObjects, canvasWidth, canvasHeight);
+    redrawCanvas(scene);
   };
-
 
   $(window).on('ready', loadCanvas);
 

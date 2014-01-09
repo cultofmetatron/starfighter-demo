@@ -185,7 +185,7 @@
   };
 
   var redrawCanvas = function(scene) {
-    requestAnimationFrame(_.bind(redrawCanvas, this, scene));
+    window.requestAnimationFrame(_.bind(redrawCanvas, this, scene));
     scene.clear();
     scene.render();
   };
@@ -199,8 +199,8 @@
       scale: 1
     }));
     scene.push(new StarFighter({
-      xPos: 200,
-      yPos: 300,
+      xPos: 500,
+      yPos: 500,
       scale: .5
     }));
     redrawCanvas(scene);

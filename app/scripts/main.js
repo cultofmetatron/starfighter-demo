@@ -41,6 +41,7 @@
   };
 
   var DrawableObject = function(src, options) {
+    this.subObjects = [];
     this.order = options.order || 0;
     var imgLoad = $.Deferred();
     this.imgLoaded = imgLoad.promise();
@@ -53,6 +54,7 @@
       this.setScale(options.scale || 1);
       imgLoad.resolve();
     }, this);
+    setInterval(_.bind(this.removeStaleObjects, this), 100);
   };
 
   DrawableObject.prototype = Object.create({});
@@ -75,59 +77,112 @@
     this.height = Math.floor(this.image.height * scale);
     return this;
   };
+  DrawableObject.fn.addSubObject = function(drawableObject) {
+    this.subObjects.push(drawableObject);
+  };
+  DrawableObject.fn.removeSubObject = function(drawableObject) {
+    this.subObjects = _(this.subObjects).filter(function(obj){
+      return drawableObject !== obj;
+    }, this);
+  };
+  DrawableObject.fn.drawSubObjects = function(context) {
+    _(this.subObjects).chain()
+      .sort('order')
+      .each(function(drawableObject) {
+        drawableObject.draw(context);
+      })
+      .value();
+    return this;
+  };
+  DrawableObject.fn.removeStaleObjects = function() {
+    this.subObjects = _(this.subObjects).filter(function(obj) {
+      if (_.isFunction(obj.isStale)) {
+        return !obj.isStale();
+      } else {
+        return true;
+      }
+    }, this);
+    return this;
+  };
   DrawableObject.fn.draw = function(context) {
     this.imgLoaded.done(bind(function() {
       context.drawImage(this.image,this.xPos, this.yPos, this.width, this.height);
+      this.drawSubObjects(context);
     }, this));
     return this;
   };
+
+  var Missile = function(options) {
+    DrawableObject.call(this, '/images/missile.png', options);
+    this.lifespan = options.lifespan || 2000;
+    this.createdAt = Date.now();
+    setInterval(_.bind(this.moveUp, this), 10);
+  };
+  Missile.prototype = Object.create(DrawableObject.prototype);
+  Missile.fn = Missile.prototype;
+  Missile.fn.isStale = function() {
+    return (Date.now() - this.lifespan) > this.createdAt;
+  };
+  Missile.fn.moveUp = function() {
+    var pos = this.getPosition();
+    this.setPosition(pos.xPos, pos.yPos - 10);
+  };
+
 
 
   var StarFighter = function(options) {
     DrawableObject.call(this, '/images/fighter.png', options);
     //this.bindKeyHandler('keydown',  this.moveDown);
-    this.bindKeyHandler('keydown'  ,  {
+    this.bindKeyHandler('keydown',  {
       38: this.moveUp,
       37: this.moveLeft,
       39: this.moveRight,
-      40: this.moveDown
+      40: this.moveDown,
+      32: this.fireMissile
     });
-
-
-    //this.bindKeyHandler('keyleft',  this.moveLeft);
-    //this.bindKeyHandler('keyright', this.moveRight);
   };
+
 
   StarFighter.prototype = Object.create(DrawableObject.prototype);
   StarFighter.fn = StarFighter.prototype;
   StarFighter.fn.bindKeyHandler = function(key, keyMap) {
     //$(window).on(key, _.bind(fn, this));
     $(window).on('keydown', _.bind(function(e) {
-      e.preventDefault();
-      keyMap[event.keyCode].call(this);
+      if (keyMap[event.keyCode]) { 
+        e.preventDefault();
+        keyMap[event.keyCode].call(this);
+      }
     }, this));
+  };
+  StarFighter.fn.fireMissile = function() {
+
+    this.addSubObject(new Missile({
+      xPos: this.xPos + 10,
+      yPos: this.yPos - 30,
+      scale: 1
+    }));
+    return this;
   };
 
   StarFighter.fn.moveLeft = function() {
     var pos = this.getPosition();
-    this.setPosition(pos.xPos - 5, pos.yPos);
+    this.setPosition(pos.xPos - 10, pos.yPos);
   };
 
   StarFighter.fn.moveRight = function() {
     var pos = this.getPosition();
-    this.setPosition(pos.xPos + 5, pos.yPos);
+    this.setPosition(pos.xPos + 10, pos.yPos);
   };
 
   StarFighter.fn.moveUp = function() {
     var pos = this.getPosition();
-    this.setPosition(pos.xPos, pos.yPos - 5);
+    this.setPosition(pos.xPos, pos.yPos - 10);
   };
 
   StarFighter.fn.moveDown = function() {
     var pos = this.getPosition();
-    this.setPosition(pos.xPos, pos.yPos + 5);
+    this.setPosition(pos.xPos, pos.yPos + 10);
   };
-
 
   var redrawCanvas = function(scene) {
     requestAnimationFrame(_.bind(redrawCanvas, this, scene));
@@ -135,18 +190,14 @@
     scene.render();
   };
 
-
   var loadCanvas = function() {
     var $canvas = $('canvas#drawable');
     var scene = new Scene($canvas[0]);
-    
-    
     scene.push(new DrawableObject('/images/background.jpeg', {
       xPos: 0,
       yPos: 0,
       scale: 1
     }));
-    
     scene.push(new StarFighter({
       xPos: 200,
       yPos: 300,
